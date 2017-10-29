@@ -35,7 +35,8 @@ class FBGame:
             tmpTop = random.randint(self.parameters['block_top_thresh'], self.parameters['block_bot_thresh'] - self.parameters['block_min_size'])
             tmpBot = random.randint(tmpTop + self.parameters['block_min_size'], self.parameters['block_bot_thresh'])
             self.gameState['blocks'].append([tmpTop, tmpBot])
-        self.running = False
+        self.running = True
+        self.score = 0
 
     def load_resources(self):
         self.images = {}
@@ -66,7 +67,7 @@ class FBGame:
         self.gameState['dist_to_next_block'] -= self.parameters['v'] * time_interval
         if up:
             self.gameState['v_y'] = self.parameters['a_y']
-        if self.gameState['dist_to_next_block'] + self.parameters['block_width'] + self.parameters['bird_x'] < 0:
+        if self.gameState['dist_to_next_block'] + self.parameters['block_width'] < 0:
             self.gameState['dist_to_next_block'] += self.parameters['block_gap']
             self.gameState['blocks'].pop(0)
             tmpTop = random.randint(self.parameters['block_top_thresh'], self.parameters['block_bot_thresh'] - self.parameters['block_min_size'])
@@ -76,6 +77,27 @@ class FBGame:
             if self.gameState['bird_y'] + self.parameters['bird_height'] > self.gameState['blocks'][0][1] or self.gameState['bird_y'] - self.parameters['bird_height'] < self.gameState['blocks'][0][0]:
                 self.running = False # game over
                 print('Game Over')
+                self.score = -2
+        self.score += 1
+        self.render_scene()
+        return self.score, self.scene
+
+    def generate_random_game_scene(self, file_name):
+        self.gameState['dist_to_next_block'] = random.randint(-self.parameters['block_width'], self.parameters['block_gap'])
+        self.gameState['blocks'] = []
+        for i in range(0,4):
+            tmpTop = random.randint(self.parameters['block_top_thresh'], self.parameters['block_bot_thresh'] - self.parameters['block_min_size'])
+            tmpBot = random.randint(tmpTop + self.parameters['block_min_size'], self.parameters['block_bot_thresh'])
+            self.gameState['blocks'].append([tmpTop, tmpBot])
+        if self.gameState['dist_to_next_block'] < self.parameters['bird_width']/2 and self.gameState['dist_to_next_block'] + self.parameters['block_width'] > - self.parameters['bird_width']/2 :
+            self.gameState['bird_y'] = random.randint(int(self.gameState['blocks'][0][0] + self.parameters['bird_height']/2), int(self.gameState['blocks'][0][1] - self.parameters['bird_height']/2))
+        else:
+            self.gameState['bird_y'] = random.randint(20, self.parameters['window_height'] - 20)
+        self.render_scene()
+        imgStr = 'training_data/' + file_name + '.png'
+        print(imgStr)
+        cv2.imwrite( imgStr, self.scene )
+        return self.gameState
 
     def press(self, event):
         #print('press', event.key)
@@ -104,4 +126,3 @@ class FBGame:
             if self.running:
                 self.update_scene(self.keyDown)
                 self.keyDown = False
-                self.render_scene()
