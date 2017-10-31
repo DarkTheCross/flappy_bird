@@ -32,48 +32,38 @@ def preprocess_game_scene(gameScene):
     data = tmpImg/255.0
     return data
 
-def weight_variable(shape):
-    initial = tf.truncated_normal(shape, stddev=0.1)
-    return tf.Variable(initial)
-
-def bias_variable(shape):
-    initial = tf.constant(0.1, shape=shape)
-    return tf.Variable(initial)
-
 def main():
     x = tf.placeholder(tf.float32, shape=[None, 128, 128])
     y_ = tf.placeholder(tf.float32, shape=[None, 8])
     x1 = tf.reshape(x, shape=[-1, 128, 128, 1])
-    conv1 = tf.layers.conv2d(x1, 32, 5, activation=tf.nn.relu, padding='same', trainable = False)
+    conv1 = tf.layers.conv2d(x1, 32, 5, activation=tf.nn.relu, padding='same')
     pool1 = tf.layers.max_pooling2d(conv1, strides=(2,2), pool_size=(2,2), padding='same')
-    conv2 = tf.layers.conv2d(pool1, 64, 3, activation=tf.nn.relu, padding='same', trainable = False)
+    conv2 = tf.layers.conv2d(pool1, 64, 3, activation=tf.nn.relu, padding='same')
     pool2 = tf.layers.max_pooling2d(conv2, strides=(2,2), pool_size=(2,2), padding='same')
-    conv3 = tf.layers.conv2d(pool2, 32, 3, activation=tf.nn.relu, padding='same', trainable = False)
+    conv3 = tf.layers.conv2d(pool2, 32, 3, activation=tf.nn.relu, padding='same')
     pool3 = tf.layers.max_pooling2d(conv3, strides=(2,2), pool_size=(2,2), padding='same')
-    W_fc1 = weight_variable([16*16*32, 512])
-    b_fc1 = bias_variable([512])
-    h_pool2_flat = tf.reshape(pool3, [-1, 16*16*32])
-    h_fc1 = tf.matmul(h_pool2_flat, W_fc1) + b_fc1
-    W_fc2 = weight_variable([512, 8])
-    b_fc2 = bias_variable([8])
-    y_conv = tf.matmul(h_fc1, W_fc2) + b_fc2
-    loss = tf.reduce_mean(tf.square(y_conv - y_))
+    pool3_flatten = tf.contrib.layers.flatten(pool3)
+    fc1 = tf.contrib.layers.fully_connected(pool3_flatten, 512, activation_fn=None)
+    y_conv = tf.contrib.layers.fully_connected(fc1, 8, activation_fn=None)
+    loss = tf.reduce_mean(tf.square(y_conv - y_)) * 1000
     train_step =  tf.train.AdamOptimizer(1e-4).minimize(loss)
     saver = tf.train.Saver()
     with tf.Session() as sess:
         saver.restore(sess, 'saved/model.ckpt')
+        p = tf.all_variables()
+        print(p)
         g = FBGame()
         g.load_resources()
         g.render_scene()
-        for i in range(1, 50):
+        for i in range(1, 500):
             p = bool(random.random()>0.9)
-            s1, s2 = g.update_scene(p)
-            print(s2)
-            tmpx = preprocess_game_scene(s2)
+            r, t, s = g.update_scene(p)
+            tmpx = preprocess_game_scene(s)
             tmpres = y_conv.eval(feed_dict={x: [tmpx]})
-            cv2.imshow('d', tmpx)
             print(tmpres)
-            cv2.waitKey(0)
+            print(t)
+            if not r:
+                break
 
 if __name__ == '__main__':
     main()

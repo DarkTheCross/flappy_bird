@@ -5,7 +5,7 @@ g.load_resources()
 
 f = open('training_data/label.txt', 'w')
 
-for i in range(0, 100):
+for i in range(0, 300):
     stateRec = g.generate_random_game_scene( str(i) )
     line = str(i) + ':'
     line += str(stateRec['bird_y'])
